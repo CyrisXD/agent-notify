@@ -16,7 +16,7 @@ Sends one HTML email to the user. Their inbox is the high-signal channel, so eve
 - They're probably not watching this session (long job, background or scheduled run, or they asked you to tell them).
 - You haven't already emailed about this same issue in this session.
 
-Typical yes: a build or deploy failed, you're blocked waiting on credentials or a decision, a long job finished, data looks wrong, an action needs approval.
+Typical yes: something they asked you to watch for showed up (a new lead, a price drop, free games), a build or deploy failed, you're blocked waiting on credentials or a decision, a long job finished, data looks wrong, an action needs approval.
 Typical no: step done, minor warning you handled, anything already shown in the chat they're reading.
 
 When unsure, don't send. Batch related findings into one email.
@@ -38,22 +38,46 @@ Use `jq` (or Python `json.dumps`) to build the JSON. Never hand-escape HTML into
 
 ## Writing it
 
-**Subject**: `[TAG] project: what happened`, at most about 80 characters. Tags: `ACTION` (needs them), `FAILED`, `DONE`, `WARN`.
-e.g. `[FAILED] billing-api: prod deploy rolled back`, `[ACTION] site-redesign: approve DNS cutover`
+Pick the shape that fits. Either way: easy to scan on a phone, inline styles only (email clients drop `<style>` and scripts), and never secrets, tokens or full env dumps.
 
-**Body**: what happened, why it matters, the one thing to do next, then links or details. Write it so it reads on a phone in 10 seconds. Use inline styles only (email clients drop `<style>` and scripts):
+### Alerts: something happened
+
+Short. What happened, why it matters, the one thing to do next, then details. Readable in about 10 seconds.
+
+**Subject**: `[TAG] topic: what happened`, at most about 80 characters. Tags: `ACTION` (needs them), `FAILED`, `DONE`, `WARN`.
+e.g. `[FAILED] nightly backup: disk full`, `[ACTION] website: approve the new homepage`, `[DONE] tax report: ready to review`
 
 ```html
 <div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;color:#111;line-height:1.5">
-  <p style="margin:0 0 4px;font-size:12px;color:#c00;font-weight:600;letter-spacing:.04em">FAILED · billing-api</p>
-  <h2 style="margin:0 0 12px;font-size:18px">Prod deploy rolled back</h2>
-  <p style="margin:0 0 12px">Migration 0042 timed out after 5 min; the deploy auto-rolled back. Prod is healthy on v1.8.3.</p>
-  <p style="margin:0 0 12px"><b>Next:</b> decide whether to run 0042 off-peak or split it.</p>
-  <pre style="background:#f4f4f5;padding:10px;border-radius:6px;font-size:12px;white-space:pre-wrap">ERROR: canceling statement due to statement timeout</pre>
-  <p style="margin:12px 0 0;font-size:12px;color:#666">Sent by Claude Code · ~/PROJECTS/billing-api</p>
+  <p style="margin:0 0 4px;font-size:12px;color:#c00;font-weight:600;letter-spacing:.04em">FAILED · nightly backup</p>
+  <h2 style="margin:0 0 12px;font-size:18px">Last night's backup didn't finish</h2>
+  <p style="margin:0 0 12px">The backup drive filled up at 2:14am, so only 2 of 3 folders were saved. Nothing was lost.</p>
+  <p style="margin:0 0 12px"><b>Next:</b> free up about 20 GB on the backup drive, then I'll retry tonight.</p>
+  <pre style="background:#f4f4f5;padding:10px;border-radius:6px;font-size:12px;white-space:pre-wrap">Error: no space left on device</pre>
+  <p style="margin:12px 0 0;font-size:12px;color:#666">Sent by your agent · nightly backup</p>
 </div>
 ```
 
-Tag colors: FAILED `#c00`, ACTION `#b45309`, WARN `#a16207`, DONE `#15803d`.
+Tag colors: FAILED `#c00`, ACTION `#b45309`, WARN `#a16207`, DONE `#15803d`. Keep any error output to the relevant lines.
 
-Never put secrets, tokens, or full env dumps in an email. Keep logs to the relevant lines.
+### Digests and reports: content they asked for
+
+A list of free games, new leads, research results, a weekly summary. As long as the content needs, but easy to skim: a one-line summary at the top, then one block per item with the key facts (price, deadline, contact, link) and a line on why it's worth their time. Lead with the best items, cut filler, and link out rather than pasting everything.
+
+**Subject**: what's inside, e.g. `Free games this week: 3 worth grabbing`, `5 new leads: 2 look hot`.
+
+```html
+<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:600px;color:#111;line-height:1.5">
+  <h2 style="margin:0 0 4px;font-size:20px">Free games this week</h2>
+  <p style="margin:0 0 20px;color:#555">3 worth grabbing, all free until Thursday.</p>
+  <div style="padding:14px 0;border-top:1px solid #e5e5e5">
+    <a href="https://example.com/game" style="font-size:16px;font-weight:600;color:#111">Game title</a>
+    <p style="margin:4px 0 0;font-size:13px;color:#666">Epic Games · usually $24.99 · free until Thu 9 Oct</p>
+    <p style="margin:6px 0 0">One or two lines on why it's worth it.</p>
+  </div>
+  <!-- repeat one block per item -->
+  <p style="margin:16px 0 0;font-size:12px;color:#666">Sent by your agent · weekly free games check</p>
+</div>
+```
+
+Images are fine if they have a public URL: `<img src="..." alt="..." style="width:100%;max-width:600px;border-radius:6px">`.

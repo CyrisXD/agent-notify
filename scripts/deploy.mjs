@@ -1,8 +1,17 @@
-// Runs after `wrangler deploy`: on first deploy, asks the Worker to email the owner a setup link,
-// then prints a banner in the deploy log. Never fails the build.
-import { readFileSync } from "node:fs";
+// `npm run deploy`: runs `wrangler deploy`, then on first deploy asks the Worker to email the owner
+// a setup link and prints a banner in the deploy log. Only a failed `wrangler deploy` fails the build.
+import { spawnSync } from "node:child_process";
+import { readFileSync, rmSync } from "node:fs";
 
 const OUTPUT = ".wrangler/deploy-output.json";
+
+rmSync(OUTPUT, { force: true });
+const deploy = spawnSync("npx", ["wrangler", "deploy", ...process.argv.slice(2)], {
+	stdio: "inherit",
+	shell: process.platform === "win32",
+	env: { ...process.env, WRANGLER_OUTPUT_FILE_PATH: OUTPUT },
+});
+if (deploy.status !== 0) process.exit(deploy.status ?? 1);
 
 const banner = (lines) => {
 	const width = Math.max(...lines.map((l) => l.length)) + 4;
@@ -36,8 +45,8 @@ const lines = {
 		"📬  CHECK YOUR EMAIL",
 		"",
 		`A one-time setup link was sent to ${result?.to}.`,
-		"Open it to get your access token and agent setup instructions",
-		"(Claude Code, Cursor and other MCP clients, curl, skill).",
+		"Open it to get your access token and setup steps for your agent",
+		"(Claude, ChatGPT, Grok Bot, Cursor, scripts).",
 		"",
 		"The link expires in 1 hour and the token is shown only once, so save it.",
 		"No email? Check spam, then request a new link at:",
@@ -45,11 +54,15 @@ const lines = {
 	],
 	already_setup: [
 		"agent-notify updated. Already set up, so no setup email was sent.",
-		`Lost your token? Request a new link at: ${url}`,
+		"Lost your token? Delete this Worker and deploy agent-notify again.",
 	],
 	cooldown: [
 		`📬  A setup link was sent to ${result?.to} in the last 10 minutes. Check your email.`,
 		`Need another? Request one at: ${url}`,
+	],
+	limit: [
+		"Deployed. Today's setup-link allowance is used up, so no email was sent.",
+		`Request one tomorrow (00:00 UTC) at: ${url}`,
 	],
 	error: [
 		"⚠️  DEPLOYED, BUT THE SETUP EMAIL COULD NOT BE SENT",

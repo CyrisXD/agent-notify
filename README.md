@@ -1,110 +1,120 @@
 # agent-notify
 
-Your agents are noisy. Let them email you only for the things that matter.
+![agent-notify: your agents, in your inbox](docs/hero.png)
 
-A single Cloudflare Worker that turns an HTTP call or MCP tool call into an HTML email to **you**. It is free: see [Cost](#cost).
+Always-on agents like OpenAI Dots and Grok Bot now keep working after you close the app. agent-notify gives them, and Claude Code, Cursor and your scripts, a way to email you when something needs your attention: a new lead, free games this week, a failed backup, a finished report.
+
+It's one Cloudflare Worker that you deploy to your own free account in one click, and it's private by design. Emails can only go to your inbox, and your access token is shown once and never stored in readable form. There's no shared service in the middle: it runs entirely on your own Cloudflare account.
+
+**Works with** Claude Code, Cursor, Grok Bot, ChatGPT and OpenAI Dots (wherever custom connectors are available), and anything else that can use an MCP server or send a web request.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/CyrisXD/agent-notify)
 
-## Requirements
+![How it works](docs/how-it-works.png)
 
-- A free **Cloudflare account**.
-- A **domain on Cloudflare DNS** to send from. Its nameservers must point to Cloudflare.
-- An **inbox you can receive at**. It can be on any provider (Gmail, Proton, etc.) and doesn't need to be on that domain.
+## Setup
 
-Nothing to install locally. Everything runs in your browser and on Cloudflare.
+**You need:** a free Cloudflare account, a domain on Cloudflare, and any inbox (Gmail, Proton, work email…). Nothing to install.
 
-## Before you deploy (2 minutes, once)
+### 1. Prepare Cloudflare (once, 2 minutes)
 
-The deploy can't do these for you, because Cloudflare doesn't give deploy builds permission to change email settings. If you skip them, the deploy still succeeds but the setup email can't be sent, and the deploy log tells you what's missing.
+1. [**Onboard your domain for sending**](https://dash.cloudflare.com/?to=/:account/email-service/sending): click **Onboard Domain** and pick your domain.
+2. [**Verify your inbox**](https://dash.cloudflare.com/?to=/:account/email-service/routing): go to **Destination addresses**, add the address where you want alerts, and click the link Cloudflare emails you.
 
-1. **Allow the domain to send:** [open Email Sending](https://dash.cloudflare.com/?to=/:account/email-service/sending), click **Onboard Domain** and pick your domain. You can also onboard a subdomain such as `notify.yourdomain.com`. Cloudflare adds the sending records itself, all under a `cf-bounce` subdomain plus DKIM.
-2. **Verify your inbox:** use the existing address where you want alerts (Gmail, Proton, work email, anything). [Open this page](https://dash.cloudflare.com/?to=/:account/email-service/routing), go to **Destination addresses**, add the address, and click the link in the verification email Cloudflare sends. This only confirms you own the address. You don't need to set up anything else on that page.
+> **Domain already has email?** That's fine. Onboarding doesn't touch your MX records. If it offers a new DMARC record, keep your existing one if other tools send as your domain.
 
-> **Already have email on this domain (Google Workspace, Proton, Fastmail…)?** That's fine. Onboarding only adds records under `cf-bounce`, so your existing inbox keeps working. It also proposes a DMARC record (`p=reject`) that replaces any existing one. That's fine if all your mail goes through a properly set up provider. If other tools send as your domain (newsletters, invoicing, Gmail "send as"), keep your existing DMARC record instead.
+### 2. Deploy
 
-## Deploy
+Click **Deploy to Cloudflare** above and fill in:
 
-Click the button. When asked, fill in:
+- **`TO_ADDRESS`**: the inbox you verified
+- **`FROM_ADDRESS`**: any address on your onboarded domain, e.g. `alerts@yourdomain.com`
 
-| Name | What |
-|---|---|
-| `TO_ADDRESS` | The inbox you verified in step 2 |
-| `FROM_ADDRESS` | Any address on the domain (or subdomain) you onboarded in step 1, e.g. `alerts@yourdomain.com` |
-| `DAILY_LIMIT` | Max emails per day. Leave at `100` (see [Cost](#cost)) |
+### 3. Check your email
 
-When the deploy finishes, **check your email**: the first deploy automatically sends a one-time setup link to `TO_ADDRESS`, and the deploy log says so. (No email? Open your Worker's URL and click **Email me a setup link**.) Open the one-time link from your inbox and press **Reveal** to see your access token plus copy-paste config for Claude Code, Cursor and other MCP clients, curl, and the skill. **That page is shown once, so save the token straight away.** Getting the email also confirms sending works.
+You'll get a one-time setup link. Open it, press **Reveal**, and follow the steps. **That page is shown once, so save your token.**
 
-<details><summary>Prefer the CLI?</summary>
-
-```bash
-git clone https://github.com/CyrisXD/agent-notify && cd agent-notify && npm i
-# edit TO_ADDRESS / FROM_ADDRESS in wrangler.jsonc
-npm run deploy
-```
-Then check your email for the setup link.
-</details>
+<img src="docs/setup-page.png" alt="The setup page: save your token, connect your agent, install the skill, send a test" width="460">
 
 ## Use it
 
-**HTTP** (any script, cron job, CI, agent):
+Just ask your agent in plain words:
+
+> Check the free games on Epic every Friday and email me the good ones.
+
+> Watch my inbox for new leads and email me a one-line summary of each.
+
+**ChatGPT, Grok Bot and other apps** that only accept a URL: add the secret MCP URL from your setup page as a custom connector with no authentication.
+
+Or send from any script:
 
 ```bash
-curl -X POST https://agent-notify.<you>.workers.dev \
+curl -X POST "$AGENT_NOTIFY_URL" \
   -H "Authorization: Bearer $AGENT_NOTIFY_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"subject":"Deploy failed","html":"<b>prod</b> is down"}'
+  -d '{"subject":"Backup finished","text":"All 3 databases backed up."}'
 ```
 
-Body: `subject` (required, max 200 chars) plus `html` and/or `text`. Returns `{"ok":true}`.
+## The skill
 
-**MCP** at `/mcp` exposes one tool, `send_email_notification`:
+The connection lets your agent send email. The [agent-notify skill](skills/agent-notify/SKILL.md) teaches it to do that well.
+
+- **Knows when to email.** It always sends when you ask, and otherwise only for things you'd want to know about now: what you asked it to watch for, failures, decisions waiting on you, finished long jobs. It skips routine progress and doesn't repeat itself.
+- **Writes emails that are easy to read.** Alerts are short: a clear subject like `[FAILED] nightly backup`, what happened and what to do next. Digests you ask for (this week's free games, new leads, a report) can be as long as they need, laid out item by item with links so they're easy to skim on a phone.
+- **Stays safe.** It never puts passwords, tokens or secrets in an email, and it stops (rather than retrying) when the daily limit is reached.
+
+Install it in Claude Code with one command (also shown on your setup page):
 
 ```bash
-claude mcp add --scope user --transport http agent-notify https://agent-notify.<you>.workers.dev/mcp \
-  --header "Authorization: Bearer <token>"
+mkdir -p ~/.claude/skills/agent-notify && curl -fsSL https://raw.githubusercontent.com/CyrisXD/agent-notify/main/skills/agent-notify/SKILL.md -o ~/.claude/skills/agent-notify/SKILL.md
 ```
 
-Any MCP client that can send a custom header works. Clients that only support OAuth (claude.ai custom connectors) aren't supported yet.
+Then just mention email ("email me when it's done") or call it directly:
 
-**Claude Code skill.** [`skills/agent-notify`](skills/agent-notify/SKILL.md) teaches agents *when* an alert is worth sending and how to format it. Copy it to `~/.claude/skills/`.
-
-Check a deployment end to end (sends one real test email):
-
-```bash
-./smoke.sh https://agent-notify.<you>.workers.dev $AGENT_NOTIFY_TOKEN
+```
+/agent-notify find this week's free games and email me the best three
 ```
 
-## Security
-
-- Setup links only go to the owner's inbox, work once, and expire after an hour, so a public setup page is safe. A link can be requested once every 10 minutes.
-- The token itself is never emailed. It is 64 random hex characters, shown once on the revealed page, and only its SHA-256 hash is stored.
-- Opening the link only shows a confirm page. The token appears after you press **Reveal**, so email security scanners that prefetch links can't use it up.
-- Every request needs the token, checked in constant time.
-- The recipient is fixed when you deploy. Callers can't choose who gets the email.
-- Cloudflare only delivers to verified addresses, so even a leaked token can't spam anyone else.
-- Each person deploys their own Worker. There's no shared service, and nothing is stored except the token.
-- **Lost or leaked token?** Request a new setup link. Revealing it creates a new token and the old one stops working immediately.
+The skill is a plain Markdown file, so other agents that support skills or custom instructions can use it too.
 
 ## Cost
 
-**On the Workers Free plan this costs nothing and can't cost anything.** Free-plan limits (100,000 requests and 1,000 KV writes a day) make requests fail until the daily reset; they never bill you. Sending to your own verified address is free on every plan.
+**Free.** On Cloudflare's free plan it can't cost anything: going over a limit just pauses sending until the next day.
 
-**On the Workers Paid plan** ($5/month, if you already use it for other things):
-- Emails to your **verified** `TO_ADDRESS` are free and don't count toward any quota. Verify it (step 2 above).
-- If `TO_ADDRESS` isn't verified, emails count toward the 3,000 included per month, then cost $0.35 per 1,000. `DAILY_LIMIT=100` caps you at about 3,000 a month, so even then it stays within what's included.
-- Like any public Worker, someone flooding your URL creates billable requests ($0.30 per million after 10 million a month), even though they're rejected.
+On the $5 Workers Paid plan, emails to your verified inbox are still free, and `DAILY_LIMIT` (default 100 a day) keeps you inside the included quota. If you're on Paid, [set a budget alert](https://developers.cloudflare.com/billing/manage/budget-alerts/) anyway.
 
-**Set a budget alert** if you're on a paid plan: **Manage Account → Billing → Billable Usage → Create budget alert**, e.g. at $1. Alerts notify you; they don't stop usage.
+## Security
 
-## Troubleshooting
+- Only you receive the emails: the recipient is fixed when you deploy, so callers can't choose who gets them.
+- Your token is shown once and never emailed. Only its hash is stored.
+- Setup happens once. Links only go to your inbox, expire in an hour, and stop working the moment your token is revealed. Nobody can reset or replace it afterwards.
+- Lost or leaked token? Delete the Worker in Cloudflare and deploy again for a fresh one.
 
-- **Build fails with "build token … deleted or rolled":** open the Worker → **Settings → Builds** → **API token** → **Create new token**, save, then **Retry build**.
-- **"email sending not authorized" in the deploy log or on the setup page:** the `FROM_ADDRESS` domain isn't onboarded yet. [Onboard the domain](https://dash.cloudflare.com/?to=/:account/email-service/sending) (step 1 of [Before you deploy](#before-you-deploy-2-minutes-once)), wait a few minutes for DNS, then click **Email me a setup link** on your Worker's URL. No redeploy needed.
-- **Other send errors:** check that `TO_ADDRESS` is a verified destination address and `FROM_ADDRESS` is on the onboarded domain (Worker → **Settings → Variables**).
-- **429 "Daily email limit reached":** `DAILY_LIMIT` was hit. It resets at 00:00 UTC.
+<details>
+<summary><b>Troubleshooting</b></summary>
 
-## Limits
+- **"email sending not authorized":** your `FROM_ADDRESS` domain isn't onboarded (step 1). Fix it, wait a few minutes, then open your Worker's URL and click **Email me a setup link**. No redeploy needed.
+- **Need to change `TO_ADDRESS`, `FROM_ADDRESS` or `DAILY_LIMIT`?** Edit `wrangler.jsonc` in the copy of this repo that Cloudflare created on your GitHub. Committing redeploys it. Don't change them in the Cloudflare dashboard: the next deploy resets them.
+- **No setup email:** check spam, then request one from your Worker's URL.
+- **Claude Code says the tool isn't available:** run `claude mcp list`. If `agent-notify` is missing, re-run the command from your setup page (it uses `--scope user`, so it works in every folder).
+- **Build fails with "build token … deleted or rolled":** Worker → **Settings → Builds → API token → Create new token**, then **Retry build**.
+- **429 "Daily email limit reached":** resets at 00:00 UTC. To raise it, change `DAILY_LIMIT` (see above).
 
-- 200-character subject, about 5 MiB per message (Cloudflare limit).
-- `DAILY_LIMIT` emails per day (default 100), including setup-link emails.
+</details>
+
+<details>
+<summary><b>Deploy from the command line instead</b></summary>
+
+```bash
+git clone https://github.com/CyrisXD/agent-notify && cd agent-notify && npm i
+# set TO_ADDRESS and FROM_ADDRESS in wrangler.jsonc
+npm run deploy
+```
+
+</details>
+
+MIT licensed.
+
+If agent-notify saves you some time, you can buy me a coffee:
+
+<a href="https://buymeacoffee.com/FiRmVXOZh"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="48"></a>

@@ -1,15 +1,14 @@
 {
   "name": "agent-notify",
   "version": "1.0.0",
-  "description": "Deploy-to-Cloudflare email notifications for your AI agents (HTTP + MCP)",
+  "description": "One-click Cloudflare Worker that lets your AI agents email you when something needs your attention (MCP + HTTP).",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "WRANGLER_OUTPUT_FILE_PATH=.wrangler/deploy-output.json wrangler deploy && node scripts/postdeploy.mjs",
+    "deploy": "node scripts/deploy.mjs",
     "types": "wrangler types",
     "check": "wrangler types && tsc"
   },
   "license": "MIT",
-  "type": "commonjs",
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
     "agents": "^0.26.0",

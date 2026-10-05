@@ -8,8 +8,6 @@ const Notification = z.object({
 	html: z.string().max(500_000).optional().describe("HTML body"),
 	text: z.string().max(500_000).optional().describe("Plain-text body (fallback, or use alone)"),
 });
-type Notification = z.infer<typeof Notification>;
-
 
 const mcpServer = (env: Env) => () => {
 	const server = new McpServer({ name: "agent-notify", version: "1.0.0" });
@@ -45,11 +43,14 @@ export default {
 		const code = pathname.match(/^\/setup\/([0-9a-f]{64})$/)?.[1];
 		if (code) return req.method === "POST" ? reveal(req, code, env) : confirmPage(code, env);
 
-		const auth = await authorized(req, env);
+		// Secret MCP URL (/mcp/<token>) for apps that can only take a URL, not a header (ChatGPT, Grok Bot...).
+		const urlToken = pathname.match(/^\/mcp\/([0-9a-f]{64})$/)?.[1];
+		const auth = await authorized(req, env, urlToken);
 		if (auth === "unset") return new Response("Not set up yet: open this URL in a browser to get your token.", { status: 401 });
 		if (!auth) return new Response("Unauthorized", { status: 401 });
 
-		if (pathname === "/mcp") return createMcpHandler(mcpServer(env))(req, env, ctx);
+		if (urlToken) req = new Request(new URL("/mcp", req.url), req);
+		if (urlToken || pathname === "/mcp") return createMcpHandler(mcpServer(env))(req, env, ctx);
 
 		if (req.method !== "POST") return new Response("POST only", { status: 405 });
 		const parsed = Notification.safeParse(await req.json().catch(() => null));
