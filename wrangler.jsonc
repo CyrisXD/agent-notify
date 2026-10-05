@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agent-notify",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Only delivers to addresses verified in Email Routing, so a leaked token can't spam strangers.
+  "send_email": [{ "name": "EMAIL" }],
+  "vars": {
+    "TO_ADDRESS": "you@example.com",
+    "FROM_ADDRESS": "alerts@yourdomain.com"
+  }
+}

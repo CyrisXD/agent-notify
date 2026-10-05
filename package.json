@@ -1,0 +1,36 @@
+{
+  "name": "agent-notify",
+  "version": "1.0.0",
+  "description": "Deploy-to-Cloudflare email notifications for your AI agents (HTTP + MCP)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "check": "wrangler types && tsc"
+  },
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
+    "agents": "^0.26.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "wrangler": "^4.147.0"
+  },
+  "private": true,
+  "cloudflare": {
+    "bindings": {
+      "AUTH_TOKEN": {
+        "description": "Secret your agents send as `Authorization: Bearer <token>`. Generate one with `openssl rand -hex 32`."
+      },
+      "TO_ADDRESS": {
+        "description": "Where alerts go. Must be a **verified destination address** in Email Routing."
+      },
+      "FROM_ADDRESS": {
+        "description": "Sender, e.g. `alerts@yourdomain.com`. Must be on a domain with **Email Routing enabled** in this account."
+      }
+    }
+  }
+}
