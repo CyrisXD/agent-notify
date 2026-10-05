@@ -10,7 +10,7 @@ check "rejects missing token"  "$(code -X POST "$U" "${J[@]}" -d '{}')" 401
 check "rejects wrong token"    "$(code -X POST "$U" "${J[@]}" -H "Authorization: Bearer wrong" -d '{}')" 401
 check "rejects empty body"     "$(code -X POST "$U" "${J[@]}" -H "Authorization: Bearer $T" -d '{"subject":"x"}')" 400
 check "mcp lists tool"         "$(curl -s -X POST "$U/mcp" "${J[@]}" -H "Authorization: Bearer $T" -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | grep -o send_notification | head -1)" send_notification
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | grep -o send_email_notification | head -1)" send_email_notification
 check "sends test email"       "$(code -X POST "$U" "${J[@]}" -H "Authorization: Bearer $T" \
   -d '{"subject":"agent-notify test","html":"<p>✅ Your agent-notify Worker works.</p>"}')" 200
 exit $fail

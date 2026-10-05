@@ -15,11 +15,14 @@ const send = (env: Env, { subject, html, text }: Notification) =>
 const mcpServer = (env: Env) => () => {
 	const server = new McpServer({ name: "agent-notify", version: "1.0.0" });
 	server.registerTool(
-		"send_notification",
+		"send_email_notification",
 		{
 			description:
-				"Email the owner an important alert. Only for things a human must see or act on soon " +
-				"(failures, blocked work, decisions needed, finished long-running jobs). Not for routine progress.",
+				"Send an email to the user (the owner of this server). Use whenever the user asks to be emailed, " +
+				'e.g. "email me the results", "send me an email when done", "notify me by email". ' +
+				"Unprompted, use only for things a human must see or act on soon (failures, blocked work, " +
+				"decisions needed, finished long-running jobs), never for routine progress. The recipient is fixed; " +
+				"you only provide subject and body.",
 			inputSchema: Notification,
 		},
 		async (n) => {

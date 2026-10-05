@@ -44,10 +44,10 @@ curl -X POST https://agent-notify.<you>.workers.dev \
 
 Body: `subject` (required, max 200 chars) plus `html` and/or `text`. Returns `{"ok":true}`.
 
-**MCP** at `/mcp` exposes one tool, `send_notification`:
+**MCP** at `/mcp` exposes one tool, `send_email_notification`:
 
 ```bash
-claude mcp add --transport http notify https://agent-notify.<you>.workers.dev/mcp \
+claude mcp add --transport http agent-notify https://agent-notify.<you>.workers.dev/mcp \
   --header "Authorization: Bearer <AUTH_TOKEN>"
 ```
 

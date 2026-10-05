@@ -1,6 +1,6 @@
 ---
 name: agent-notify
-description: Email the user an important alert through their agent-notify Cloudflare Worker. Use when something needs a human soon and they may not be watching - a task failed or is blocked, a decision or approval is needed, a long-running job finished, or something risky or unexpected happened - or when the user says "email me", "notify me", "ping me when done", "let me know if it breaks". Not for routine progress updates.
+description: Send the user an email (HTML) through their agent-notify Cloudflare Worker, using the send_email_notification tool or HTTP. Use whenever the user asks to be emailed - "email me the results", "send me an email when done", "email me a summary", "notify me", "ping me when done", "let me know if it breaks". Also use unprompted when something needs a human soon and they may not be watching - a task failed or is blocked, a decision or approval is needed, a long-running job finished. Not for routine progress updates.
 ---
 
 # agent-notify
@@ -9,7 +9,9 @@ Sends one HTML email to the user. Their inbox is the high-signal channel, so eve
 
 ## Send or not?
 
-Send when **all** are true:
+**The user asked for an email** ("email me the results", "send me an email when it's done"): always send, with what they asked for, when it's ready.
+
+**Unprompted**, send only when **all** are true:
 - A human needs to know or act, and you can't resolve it yourself.
 - They're probably not watching this session (long job, background or scheduled run, or they asked you to tell them).
 - You haven't already emailed about this same issue in this session.
@@ -21,7 +23,7 @@ When unsure, don't send. Batch related findings into one email.
 
 ## How to send
 
-1. **MCP available?** If a `send_notification` tool exists (often `mcp__notify__send_notification`), call it with `subject` and `html` (`text` is optional).
+1. **MCP available?** If a `send_email_notification` tool exists (often `mcp__agent-notify__send_email_notification`), call it with `subject` and `html` (`text` is optional).
 2. **Otherwise use HTTP**, with env vars `AGENT_NOTIFY_URL` and `AGENT_NOTIFY_TOKEN`:
 
 ```bash
