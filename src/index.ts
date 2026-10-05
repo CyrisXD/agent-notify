@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
+import { authorized, confirmPage, reveal, sendLink, startPage } from "./setup";
 
 const Notification = z.object({
 	subject: z.string().min(1).max(200).describe("Short, specific subject line"),
@@ -34,21 +35,19 @@ const mcpServer = (env: Env) => () => {
 	return server;
 };
 
-const enc = new TextEncoder();
-const authorized = (req: Request, env: Env) => {
-	const got = enc.encode(req.headers.get("Authorization") ?? "");
-	const want = enc.encode(`Bearer ${env.AUTH_TOKEN}`);
-	return got.byteLength === want.byteLength && crypto.subtle.timingSafeEqual(got, want);
-};
-
 export default {
 	async fetch(req, env, ctx) {
-		// Refuse to run with a missing or guessable token (e.g. someone clicked through the deploy form).
-		if ((env.AUTH_TOKEN ?? "").length < 32)
-			return new Response("AUTH_TOKEN must be at least 32 characters. Set it with: openssl rand -hex 32", { status: 500 });
-		if (!authorized(req, env)) return new Response("Unauthorized", { status: 401 });
+		const { pathname } = new URL(req.url);
+		if (pathname === "/" && req.method === "GET") return startPage(env);
+		if (pathname === "/setup" && req.method === "POST") return sendLink(req, env);
+		const code = pathname.match(/^\/setup\/([0-9a-f]{64})$/)?.[1];
+		if (code) return req.method === "POST" ? reveal(req, code, env) : confirmPage(code, env);
 
-		if (new URL(req.url).pathname === "/mcp") return createMcpHandler(mcpServer(env))(req, env, ctx);
+		const auth = await authorized(req, env);
+		if (auth === "unset") return new Response("Not set up yet: open this URL in a browser to get your token.", { status: 401 });
+		if (!auth) return new Response("Unauthorized", { status: 401 });
+
+		if (pathname === "/mcp") return createMcpHandler(mcpServer(env))(req, env, ctx);
 
 		if (req.method !== "POST") return new Response("POST only", { status: 405 });
 		const parsed = Notification.safeParse(await req.json().catch(() => null));

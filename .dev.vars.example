@@ -1,1 +1,0 @@
-AUTH_TOKEN= # required, 32+ chars. Generate with: openssl rand -hex 32

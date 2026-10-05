@@ -17,18 +17,19 @@ Click the button. When asked, fill in:
 
 | Name | What |
 |---|---|
-| `AUTH_TOKEN` | Secret your agents send, at least 32 characters. Generate one with `openssl rand -hex 32` |
 | `TO_ADDRESS` | Your verified destination address |
 | `FROM_ADDRESS` | Any address on your Email Routing domain, e.g. `alerts@yourdomain.com` |
+
+When the deploy finishes, **check your email**: the first deploy automatically sends a one-time setup link to `TO_ADDRESS`, and the deploy log says so. (No email? Open your Worker's URL and click **Email me a setup link**.) Open the one-time link from your inbox and press **Reveal** to see your access token plus copy-paste config for Claude Code, Cursor and other MCP clients, curl, and the skill. **That page is shown once, so save the token straight away.** Getting the email also confirms sending works.
 
 <details><summary>Prefer the CLI?</summary>
 
 ```bash
 git clone https://github.com/CyrisXD/agent-notify && cd agent-notify && npm i
 # edit TO_ADDRESS / FROM_ADDRESS in wrangler.jsonc
-npx wrangler secret put AUTH_TOKEN
-npx wrangler deploy
+npm run deploy
 ```
+Then check your email for the setup link.
 </details>
 
 ## Use it
@@ -48,7 +49,7 @@ Body: `subject` (required, max 200 chars) plus `html` and/or `text`. Returns `{"
 
 ```bash
 claude mcp add --transport http agent-notify https://agent-notify.<you>.workers.dev/mcp \
-  --header "Authorization: Bearer <AUTH_TOKEN>"
+  --header "Authorization: Bearer <token>"
 ```
 
 Any MCP client that can send a custom header works. Clients that only support OAuth (claude.ai custom connectors) aren't supported yet.
@@ -63,10 +64,19 @@ Check a deployment end to end (sends one real test email):
 
 ## Security
 
-- Every request needs the bearer token, checked in constant time.
+- Setup links only go to the owner's inbox, work once, and expire after an hour, so a public setup page is safe. A link can be requested once every 10 minutes.
+- The token itself is never emailed. It is 64 random hex characters, shown once on the revealed page, and only its SHA-256 hash is stored.
+- Opening the link only shows a confirm page. The token appears after you press **Reveal**, so email security scanners that prefetch links can't use it up.
+- Every request needs the token, checked in constant time.
 - The recipient is fixed when you deploy. Callers can't choose who gets the email.
-- Cloudflare only delivers to verified addresses, so even a leaked token can't spam anyone else. Rotate the token with `wrangler secret put AUTH_TOKEN`.
-- Each person deploys their own Worker. There's no shared service and no data stored.
+- Cloudflare only delivers to verified addresses, so even a leaked token can't spam anyone else.
+- Each person deploys their own Worker. There's no shared service, and nothing is stored except the token.
+- **Lost or leaked token?** Request a new setup link. Revealing it creates a new token and the old one stops working immediately.
+
+## Troubleshooting
+
+- **Build fails with "build token … deleted or rolled":** open the Worker → **Settings → Builds** → **API token** → **Create new token**, save, then **Retry build**.
+- **Setup page says it couldn't send:** `FROM_ADDRESS` must be on a domain with Email Routing enabled, and `TO_ADDRESS` must be a verified destination address. Fix them under the Worker's **Settings → Variables**.
 
 ## Limits
 

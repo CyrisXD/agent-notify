@@ -4,7 +4,7 @@
   "description": "Deploy-to-Cloudflare email notifications for your AI agents (HTTP + MCP)",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "WRANGLER_OUTPUT_FILE_PATH=.wrangler/deploy-output.json wrangler deploy && node scripts/postdeploy.mjs",
     "types": "wrangler types",
     "check": "wrangler types && tsc"
   },
@@ -22,14 +22,14 @@
   "private": true,
   "cloudflare": {
     "bindings": {
-      "AUTH_TOKEN": {
-        "description": "**Required, at least 32 characters.** Your agents send it as `Authorization: Bearer <token>`. Generate one with `openssl rand -hex 32`."
-      },
       "TO_ADDRESS": {
         "description": "Where alerts go. Must be a **verified destination address** in Email Routing."
       },
       "FROM_ADDRESS": {
         "description": "Sender, e.g. `alerts@yourdomain.com`. Must be on a domain with **Email Routing enabled** in this account."
+      },
+      "KV": {
+        "description": "Stores your generated access token. Leave the default."
       }
     }
   }
