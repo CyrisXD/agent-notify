@@ -12,6 +12,18 @@ const sha256 = async (s: string) => new Uint8Array(await crypto.subtle.digest("S
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const mask = (email: string) => email.replace(/^(.).*(@.*)$/, "$1•••$2");
 
+export class DailyLimitError extends Error {}
+
+/** Every email goes through here: fixed recipient, and a daily cap so usage can never become a bill. */
+export async function sendEmail(env: Env, msg: { subject: string; html?: string; text?: string }) {
+	const key = `sent:${new Date().toISOString().slice(0, 10)}`;
+	const sent = Number(await env.KV.get(key));
+	// ponytail: KV counters are eventually consistent, so parallel bursts can overshoot the cap slightly. Durable Object if exactness matters.
+	if (sent >= Number(env.DAILY_LIMIT || 100)) throw new DailyLimitError(`Daily email limit (${env.DAILY_LIMIT}) reached. Resets at 00:00 UTC.`);
+	await env.EMAIL.send({ to: env.TO_ADDRESS, from: env.FROM_ADDRESS, ...msg });
+	await env.KV.put(key, String(sent + 1), { expirationTtl: 2 * 86400 });
+}
+
 /** True if the request carries the current token. */
 export async function authorized(req: Request, env: Env) {
 	const stored = await env.KV.get("token_sha256");
@@ -78,9 +90,7 @@ export async function sendLink(req: Request, env: Env) {
 	const link = `${new URL(req.url).origin}/setup/${code}`;
 
 	try {
-		await env.EMAIL.send({
-			to: env.TO_ADDRESS,
-			from: env.FROM_ADDRESS,
+		await sendEmail(env, {
 			subject: "Your agent-notify setup link",
 			text: `Open this link to get your agent-notify token and setup instructions:\n\n${link}\n\nIt works once and expires in 1 hour. Opening it creates a new token and any previous token stops working.\nDidn't request this? Ignore it. Nothing changes unless the link is used.`,
 			html: `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;color:#111;line-height:1.5">
@@ -94,7 +104,8 @@ export async function sendLink(req: Request, env: Env) {
 	} catch (e) {
 		await env.KV.delete("link_sent_at");
 		return reply("error", `<h1>Couldn't send the email</h1><p>${esc(String(e))}</p>
-<p class="muted">Check that ${esc(env.FROM_ADDRESS)} is on a domain with Email Routing enabled, and ${esc(to)} is a verified destination address.</p>`, String(e));
+<p>Usually the domain of ${esc(env.FROM_ADDRESS)} isn't <a href="https://dash.cloudflare.com/?to=/:account/email-service/sending">onboarded for sending</a> yet. Also check ${esc(to)} is a <a href="https://dash.cloudflare.com/?to=/:account/email-service/routing">verified destination address</a>.</p>
+<p class="muted">Fixed it? Wait a few minutes for DNS, then <a href="/">try again</a>. No redeploy needed.</p>`, String(e));
 	}
 	return reply("sent", `<h1>Check your inbox</h1><p>We sent a one-time setup link to <b>${esc(to)}</b>. It expires in 1 hour.</p>
 <p class="muted">Getting that email also confirms sending works.</p>`);

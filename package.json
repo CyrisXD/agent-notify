@@ -23,13 +23,16 @@
   "cloudflare": {
     "bindings": {
       "TO_ADDRESS": {
-        "description": "Where alerts go. Must be a **verified destination address** in Email Routing."
+        "description": "Where alerts go. Must be a **verified destination address** ([Email Routing → Destination addresses](https://dash.cloudflare.com/?to=/:account/email-service/routing))."
       },
       "FROM_ADDRESS": {
-        "description": "Sender, e.g. `alerts@yourdomain.com`. Must be on a domain with **Email Routing enabled** in this account."
+        "description": "Sender, e.g. `alerts@yourdomain.com`. Its domain must be **onboarded for sending** ([Email Sending → Onboard Domain](https://dash.cloudflare.com/?to=/:account/email-service/sending)). Don't enable Email Routing on a domain that already receives mail."
       },
       "KV": {
         "description": "Stores your generated access token. Leave the default."
+      },
+      "DAILY_LIMIT": {
+        "description": "Max emails per day. The default `100` keeps you within Cloudflare's included quota, so this can never cost money. Leave it unless you need more."
       }
     }
   }

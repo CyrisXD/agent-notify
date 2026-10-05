@@ -12,6 +12,8 @@
   "kv_namespaces": [{ "binding": "KV" }],
   "vars": {
     "TO_ADDRESS": "you@example.com",
-    "FROM_ADDRESS": "alerts@yourdomain.com"
+    "FROM_ADDRESS": "alerts@yourdomain.com",
+    // Max emails per day (UTC). 100/day stays under the 3,000/month included on the Workers Paid plan.
+    "DAILY_LIMIT": "100"
   }
 }

@@ -34,7 +34,7 @@ jq -n --arg s "$SUBJECT" --arg h "$HTML" '{subject:$s, html:$h}' |
 
 Use `jq` (or Python `json.dumps`) to build the JSON. Never hand-escape HTML into a JSON string. If neither the tool nor the env vars exist, tell the user to set it up (https://github.com/CyrisXD/agent-notify) instead of failing silently. If they have deployed but have no token, they open their Worker URL in a browser and click "Email me a setup link", then open the one-time link from their inbox.
 
-`{"ok":true}` means sent. A 401 means the token is wrong; 400 means `subject` is missing or both bodies are empty.
+`{"ok":true}` means sent. A 401 means the token is wrong; 400 means `subject` is missing or both bodies are empty; 429 means the daily email limit is reached, so don't retry: tell the user in chat instead.
 
 ## Writing it
 

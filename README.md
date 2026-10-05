@@ -2,14 +2,26 @@
 
 Your agents are noisy. Let them email you only for the things that matter.
 
-A single Cloudflare Worker that turns an HTTP call or MCP tool call into an HTML email to **you**. It is free on the Workers Free plan, because sending to your own verified address costs nothing.
+A single Cloudflare Worker that turns an HTTP call or MCP tool call into an HTML email to **you**. It is free: see [Cost](#cost).
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/CyrisXD/agent-notify)
 
-## Before you deploy (5 minutes, once)
+## Requirements
 
-1. Use a domain on Cloudflare, then open **Email → Email Routing** and enable it.
-2. Under **Destination addresses**, add the inbox where you want alerts and click the link in the verification email.
+- A free **Cloudflare account**.
+- A **domain on Cloudflare DNS** to send from. Its nameservers must point to Cloudflare.
+- An **inbox you can receive at**. It can be on any provider (Gmail, Proton, etc.) and doesn't need to be on that domain.
+
+Nothing to install locally. Everything runs in your browser and on Cloudflare.
+
+## Before you deploy (2 minutes, once)
+
+The deploy can't do these for you, because Cloudflare doesn't give deploy builds permission to change email settings. If you skip them, the deploy still succeeds but the setup email can't be sent, and the deploy log tells you what's missing.
+
+1. **Allow the domain to send:** [open Email Sending](https://dash.cloudflare.com/?to=/:account/email-service/sending), click **Onboard Domain** and pick your domain. You can also onboard a subdomain such as `notify.yourdomain.com`. Cloudflare adds the sending records itself, all under a `cf-bounce` subdomain plus DKIM.
+2. **Verify your inbox:** [open Email Routing](https://dash.cloudflare.com/?to=/:account/email-service/routing), go to **Destination addresses**, add the address where you want alerts, and click the link in the verification email Cloudflare sends.
+
+> ⚠️ **Already have email on this domain (Google Workspace, Proton, Fastmail…)?** That's fine: sending works alongside it. Just **don't enable Email Routing** on the domain, because that replaces your MX records and your existing inbox stops receiving mail. If the onboarding screen offers to add a DMARC record and you already have one, keep your existing one (a domain can only have one).
 
 ## Deploy
 
@@ -17,8 +29,9 @@ Click the button. When asked, fill in:
 
 | Name | What |
 |---|---|
-| `TO_ADDRESS` | Your verified destination address |
-| `FROM_ADDRESS` | Any address on your Email Routing domain, e.g. `alerts@yourdomain.com` |
+| `TO_ADDRESS` | The inbox you verified in step 2 |
+| `FROM_ADDRESS` | Any address on the domain (or subdomain) you onboarded in step 1, e.g. `alerts@yourdomain.com` |
+| `DAILY_LIMIT` | Max emails per day. Leave at `100` (see [Cost](#cost)) |
 
 When the deploy finishes, **check your email**: the first deploy automatically sends a one-time setup link to `TO_ADDRESS`, and the deploy log says so. (No email? Open your Worker's URL and click **Email me a setup link**.) Open the one-time link from your inbox and press **Reveal** to see your access token plus copy-paste config for Claude Code, Cursor and other MCP clients, curl, and the skill. **That page is shown once, so save the token straight away.** Getting the email also confirms sending works.
 
@@ -73,12 +86,25 @@ Check a deployment end to end (sends one real test email):
 - Each person deploys their own Worker. There's no shared service, and nothing is stored except the token.
 - **Lost or leaked token?** Request a new setup link. Revealing it creates a new token and the old one stops working immediately.
 
+## Cost
+
+**On the Workers Free plan this costs nothing and can't cost anything.** Free-plan limits (100,000 requests and 1,000 KV writes a day) make requests fail until the daily reset; they never bill you. Sending to your own verified address is free on every plan.
+
+**On the Workers Paid plan** ($5/month, if you already use it for other things):
+- Emails to your **verified** `TO_ADDRESS` are free and don't count toward any quota. Verify it (step 2 above).
+- If `TO_ADDRESS` isn't verified, emails count toward the 3,000 included per month, then cost $0.35 per 1,000. `DAILY_LIMIT=100` caps you at about 3,000 a month, so even then it stays within what's included.
+- Like any public Worker, someone flooding your URL creates billable requests ($0.30 per million after 10 million a month), even though they're rejected.
+
+**Set a budget alert** if you're on a paid plan: **Manage Account → Billing → Billable Usage → Create budget alert**, e.g. at $1. Alerts notify you; they don't stop usage.
+
 ## Troubleshooting
 
 - **Build fails with "build token … deleted or rolled":** open the Worker → **Settings → Builds** → **API token** → **Create new token**, save, then **Retry build**.
-- **Setup page says it couldn't send:** `FROM_ADDRESS` must be on a domain with Email Routing enabled, and `TO_ADDRESS` must be a verified destination address. Fix them under the Worker's **Settings → Variables**.
+- **"email sending not authorized" in the deploy log or on the setup page:** the `FROM_ADDRESS` domain isn't onboarded yet. [Onboard the domain](https://dash.cloudflare.com/?to=/:account/email-service/sending) (step 1 of [Before you deploy](#before-you-deploy-2-minutes-once)), wait a few minutes for DNS, then click **Email me a setup link** on your Worker's URL. No redeploy needed.
+- **Other send errors:** check that `TO_ADDRESS` is a verified destination address and `FROM_ADDRESS` is on the onboarded domain (Worker → **Settings → Variables**).
+- **429 "Daily email limit reached":** `DAILY_LIMIT` was hit. It resets at 00:00 UTC.
 
 ## Limits
 
 - 200-character subject, about 5 MiB per message (Cloudflare limit).
-- For many alerts a day, add a [rate limiting binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/).
+- `DAILY_LIMIT` emails per day (default 100), including setup-link emails.
