@@ -1,12 +1,12 @@
-# agent-notify
+# agent-notify - Free Email Alerts
 
 ![agent-notify: your agents, in your inbox](docs/hero.png)
 
-Always-on agents like OpenAI Dots and Grok Bot now keep working after you close the app. agent-notify gives them, and Claude Code, Cursor and your scripts, a way to email you when something needs your attention: a new lead, free games this week, a failed backup, a finished report.
+Always-on agents like OpenAI Dots and Grok Bot keep working after you close the app. agent-notify lets them, and Claude Code, Cursor or any script, email you when something needs your attention: a new lead, this week's free games, a failed backup, a finished report.
 
-It's one Cloudflare Worker that you deploy to your own free account in one click, and it's private by design. Emails can only go to your inbox, and your access token is shown once and never stored in readable form. There's no shared service in the middle: it runs entirely on your own Cloudflare account.
+It's one Cloudflare Worker on your own free account, deployed in one click. **It can only send email, and only to you.** It has no access to your inbox, and there's no shared service in the middle.
 
-**Works with** Claude Code, Cursor, Grok Bot, ChatGPT and OpenAI Dots (wherever custom connectors are available), and anything else that can use an MCP server or send a web request.
+**Works with** Claude Code, Cursor, Grok Bot, ChatGPT and OpenAI Dots (wherever custom connectors are available), and anything that can use an MCP server or send a web request.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/CyrisXD/agent-notify)
 
@@ -27,6 +27,7 @@ It's one Cloudflare Worker that you deploy to your own free account in one click
 
 Click **Deploy to Cloudflare** above and fill in:
 
+- **Worker name**: add a random suffix, e.g. `agent-notify-7f3k9q2m8x4w`, so your Worker's URL can't be guessed (see [Security](#security))
 - **`TO_ADDRESS`**: the inbox you verified
 - **`FROM_ADDRESS`**: any address on your onboarded domain, e.g. `alerts@yourdomain.com`
 
@@ -38,7 +39,8 @@ You'll get a one-time setup link. Open it, press **Reveal**, and follow the step
 
 ## Use it
 
-Just ask your agent in plain words:
+After installing the MCP and Skill,
+just ask your agent in plain words:
 
 > Check the free games on Epic every Friday and email me the good ones.
 
@@ -85,10 +87,24 @@ On the $5 Workers Paid plan, emails to your verified inbox are still free, and `
 
 ## Security
 
+agent-notify is secure by design: it can only ever email you. Nothing a caller sends can change the recipient, so even a misbehaving agent can't use it to leak your data to someone else or spam other people.
+
 - Only you receive the emails: the recipient is fixed when you deploy, so callers can't choose who gets them.
 - Your token is shown once and never emailed. Only its hash is stored.
-- Setup happens once. Links only go to your inbox, expire in an hour, and stop working the moment your token is revealed. Nobody can reset or replace it afterwards.
-- Lost or leaked token? Delete the Worker in Cloudflare and deploy again for a fresh one.
+- Your Worker's URL is hard to guess. Every request counts toward your Cloudflare usage, even rejected ones, and the default name `agent-notify` is the same for everyone, so a random name keeps junk traffic away. `npm run deploy` picks one for you on the first deploy (`agent-notify-` plus 24 random characters). ***With the Deploy button, type a suffix into the Worker name field yourself.*** This is only an extra layer: nothing works without your token, whatever the URL.
+- Setup happens once. Links only go to your inbox, expire in an hour, and stop working the moment your token is revealed. You also get an email when that happens, so you'd know if anyone else got there first. Only someone with access to your Cloudflare account can reset it (see below).
+- A leaked token can only email *you*, up to `DAILY_LIMIT` a day. But those emails come from your own domain, so treat an unexpected agent-notify email asking you to log in, pay or run something as phishing.
+- Lost or leaked token? In Cloudflare go to **Storage & Databases → KV**, open this Worker's namespace and delete the `token_sha256` key. The old token stops working within about a minute and setup reopens: open your Worker's URL and request a new link.
+
+### Prompt injection
+
+Agents read web pages, emails and documents, and some of that content is written to trick them ("ignore your instructions and…"). That's prompt injection. No tool can fully prevent it, because it happens inside the agent before a request ever reaches agent-notify.
+
+What agent-notify does is limit the damage. A tricked agent can't email your files or secrets to an attacker, because the only inbox it can reach is yours. The remaining risk is a misleading email *to you*, such as a fake "log in here" link copied from a page the agent read. So:
+
+- **Use a capable, current model.** Newer frontier models are much better at spotting and ignoring injected instructions.
+- **Treat links in agent emails like links in any other email.** An agent-notify email asking you to log in, pay, or run a command is a red flag. Check where the link goes first.
+- **Give agents only the access they need.** agent-notify is safe to hand any agent, but the other tools it has (your files, accounts, shell) are what an injection would really go after.
 
 <details>
 <summary><b>Troubleshooting</b></summary>
@@ -108,7 +124,7 @@ On the $5 Workers Paid plan, emails to your verified inbox are still free, and `
 ```bash
 git clone https://github.com/CyrisXD/agent-notify && cd agent-notify && npm i
 # set TO_ADDRESS and FROM_ADDRESS in wrangler.jsonc
-npm run deploy
+npm run deploy   # first run gives the Worker a random, unguessable name and saves it in wrangler.jsonc
 ```
 
 </details>

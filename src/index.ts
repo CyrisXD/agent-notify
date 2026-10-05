@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authorized, confirmPage, DailyLimitError, reveal, sendEmail, sendLink, startPage } from "./setup";
 
 const Notification = z.object({
-	subject: z.string().min(1).max(200).describe("Short, specific subject line"),
+	subject: z.string().min(1).max(200).regex(/^[^\r\n]+$/, "Subject must be one line").describe("Short, specific subject line"),
 	html: z.string().max(500_000).optional().describe("HTML body"),
 	text: z.string().max(500_000).optional().describe("Plain-text body (fallback, or use alone)"),
 });

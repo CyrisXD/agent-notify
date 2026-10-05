@@ -1,9 +1,21 @@
 // `npm run deploy`: runs `wrangler deploy`, then on first deploy asks the Worker to email the owner
 // a setup link and prints a banner in the deploy log. Only a failed `wrangler deploy` fails the build.
 import { spawnSync } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const OUTPUT = ".wrangler/deploy-output.json";
+
+// First CLI deploy: swap the shared default name for a random one, so the workers.dev URL can't be guessed.
+// Saved to wrangler.jsonc so later deploys update the same Worker. Skipped in Workers Builds (the Deploy
+// button), where the Worker name is chosen in the dashboard and must match the config.
+const CONFIG = "wrangler.jsonc";
+const config = readFileSync(CONFIG, "utf8");
+if (!process.env.WORKERS_CI && !process.argv.includes("--name") && config.includes(`"name": "agent-notify",`)) {
+	const name = `agent-notify-${randomBytes(12).toString("hex")}`;
+	writeFileSync(CONFIG, config.replace(`"name": "agent-notify",`, `"name": "${name}",`));
+	console.log(`Named this Worker ${name} (saved in ${CONFIG}) so its URL can't be guessed.`);
+}
 
 rmSync(OUTPUT, { force: true });
 const deploy = spawnSync("npx", ["wrangler", "deploy", ...process.argv.slice(2)], {
@@ -54,7 +66,7 @@ const lines = {
 	],
 	already_setup: [
 		"agent-notify updated. Already set up, so no setup email was sent.",
-		"Lost your token? Delete this Worker and deploy agent-notify again.",
+		"Lost your token? Delete the token_sha256 key in this Worker's KV namespace, then request a new link.",
 	],
 	cooldown: [
 		`📬  A setup link was sent to ${result?.to} in the last 10 minutes. Check your email.`,

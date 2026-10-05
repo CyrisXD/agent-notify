@@ -80,7 +80,7 @@ const isSetUp = async (env: Env) => !!(await env.KV.get("token_sha256"));
 const setUpPage = () =>
 	page(`<h1>agent-notify is set up</h1>
 <p>This Worker already has a token, so no more setup links can be sent.</p>
-<p class="muted">Lost your token? Delete this Worker in the <a href="https://dash.cloudflare.com">Cloudflare dashboard</a> and deploy agent-notify again from <a href="https://github.com/CyrisXD/agent-notify">GitHub</a>.</p>`);
+<p class="muted">Lost your token? In the <a href="https://dash.cloudflare.com">Cloudflare dashboard</a>, delete the <code>token_sha256</code> key from this Worker's KV namespace, then reload this page to request a new link.</p>`);
 
 const gone = () =>
 	page(`<h1>This link has expired or was already used</h1>
@@ -154,6 +154,12 @@ export async function reveal(req: Request, code: string, env: Env) {
 	await env.KV.put("token_sha256", hex(await sha256(token)));
 
 	const url = new URL(req.url).origin;
+	// Tells the owner if someone else revealed it first (e.g. the setup link leaked via a public URL scanner).
+	// Best effort: a failed notice must not lose a token that's only shown once.
+	await sendEmail(env, {
+		subject: "Your agent-notify token was just revealed",
+		text: `Your agent-notify access token was revealed at ${new Date().toISOString()} (UTC) on ${url}.\n\nWas that you? Then there's nothing to do.\n\nIf not, cancel it: in the Cloudflare dashboard go to Storage & Databases → KV, open this Worker's namespace and delete the token_sha256 key. The token stops working within about a minute, and you can request a new setup link at ${url}`,
+	}).catch(() => {});
 	const block = (s: string) => `<div class="block"><pre>${esc(s)}</pre><button class="copy" type="button">Copy</button></div>`;
 	const step = (n: number, title: string, body: string) =>
 		`<section class="step"><div class="num">${n}</div><div><h2>${title}</h2>${body}</div></section>`;
