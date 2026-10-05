@@ -23,7 +23,7 @@
   "cloudflare": {
     "bindings": {
       "AUTH_TOKEN": {
-        "description": "Secret your agents send as `Authorization: Bearer <token>`. Generate one with `openssl rand -hex 32`."
+        "description": "**Required, at least 32 characters.** Your agents send it as `Authorization: Bearer <token>`. Generate one with `openssl rand -hex 32`."
       },
       "TO_ADDRESS": {
         "description": "Where alerts go. Must be a **verified destination address** in Email Routing."

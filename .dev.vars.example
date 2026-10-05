@@ -1,1 +1,1 @@
-AUTH_TOKEN=change-me # generate with: openssl rand -hex 32
+AUTH_TOKEN= # required, 32+ chars. Generate with: openssl rand -hex 32

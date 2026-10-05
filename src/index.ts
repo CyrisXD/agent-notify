@@ -43,7 +43,10 @@ const authorized = (req: Request, env: Env) => {
 
 export default {
 	async fetch(req, env, ctx) {
-		if (!env.AUTH_TOKEN || !authorized(req, env)) return new Response("Unauthorized", { status: 401 });
+		// Refuse to run with a missing or guessable token (e.g. someone clicked through the deploy form).
+		if ((env.AUTH_TOKEN ?? "").length < 32)
+			return new Response("AUTH_TOKEN must be at least 32 characters. Set it with: openssl rand -hex 32", { status: 500 });
+		if (!authorized(req, env)) return new Response("Unauthorized", { status: 401 });
 
 		if (new URL(req.url).pathname === "/mcp") return createMcpHandler(mcpServer(env))(req, env, ctx);
 

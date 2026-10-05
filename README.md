@@ -17,7 +17,7 @@ Click the button. When asked, fill in:
 
 | Name | What |
 |---|---|
-| `AUTH_TOKEN` | Secret your agents send. Generate one with `openssl rand -hex 32` |
+| `AUTH_TOKEN` | Secret your agents send, at least 32 characters. Generate one with `openssl rand -hex 32` |
 | `TO_ADDRESS` | Your verified destination address |
 | `FROM_ADDRESS` | Any address on your Email Routing domain, e.g. `alerts@yourdomain.com` |
 
