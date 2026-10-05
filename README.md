@@ -61,7 +61,7 @@ Body: `subject` (required, max 200 chars) plus `html` and/or `text`. Returns `{"
 **MCP** at `/mcp` exposes one tool, `send_email_notification`:
 
 ```bash
-claude mcp add --transport http agent-notify https://agent-notify.<you>.workers.dev/mcp \
+claude mcp add --scope user --transport http agent-notify https://agent-notify.<you>.workers.dev/mcp \
   --header "Authorization: Bearer <token>"
 ```
 

@@ -39,8 +39,8 @@ const page = (body: string) =>
 		`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>agent-notify</title>
 <style>
-:root{--fg:#111;--bg:#fff;--muted:#666;--code:#f4f4f5;--warn-bg:#fff4e5;--warn-fg:#8a4b00;--accent:#f6821f}
-@media(prefers-color-scheme:dark){:root{--fg:#eee;--bg:#111;--muted:#999;--code:#1e1e21;--warn-bg:#2b1d0b;--warn-fg:#ffc078}}
+:root{--fg:#111;--bg:#fff;--muted:#666;--line:#e4e4e7;--code:#f4f4f5;--warn-bg:#fff4e5;--warn-fg:#8a4b00;--accent:#f6821f}
+@media(prefers-color-scheme:dark){:root{--fg:#eee;--bg:#111;--muted:#999;--line:#333;--code:#1e1e21;--warn-bg:#2b1d0b;--warn-fg:#ffc078}}
 body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:8vh auto;padding:0 16px;color:var(--fg);background:var(--bg)}
 button{font:inherit;padding:10px 18px;border:0;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer}
 .muted{color:var(--muted);font-size:14px}
@@ -50,6 +50,15 @@ pre{background:var(--code);padding:12px;padding-right:72px;border-radius:8px;fon
 .copy{position:absolute;top:6px;right:6px;padding:4px 10px;font-size:13px}
 h3{margin:22px 0 4px;font-size:15px}
 a{color:var(--accent)}.warn a{color:inherit;font-weight:600}
+.step{display:grid;grid-template-columns:28px 1fr;gap:14px;margin:32px 0}
+.num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600;font-size:14px}
+.step h2{margin:0 0 4px;font-size:18px;line-height:28px}
+.step p{margin:4px 0 10px}
+details{border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:8px 0}
+details[open]{padding-bottom:4px}
+summary{cursor:pointer;font-weight:600}
+summary span{font-weight:400;color:var(--muted);font-size:14px}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:14px}
 </style>
 ${body}`,
 		{
@@ -132,25 +141,40 @@ export async function reveal(req: Request, code: string, env: Env) {
 
 	const url = new URL(req.url).origin;
 	const block = (s: string) => `<div class="block"><pre>${esc(s)}</pre><button class="copy" type="button">Copy</button></div>`;
-	return page(`<h1>Your agent-notify setup</h1>
-<div class="warn"><b>Save this now. This page will not be shown again.</b> If you refresh or leave, the token is gone. Lost it? Request a new link from <a href="/">the setup page</a>, which replaces this token.</div>
-<p class="muted">Endpoint: ${esc(url)}. The token may take up to a minute to work everywhere.</p>
+	const step = (n: number, title: string, body: string) =>
+		`<section class="step"><div class="num">${n}</div><div><h2>${title}</h2>${body}</div></section>`;
+	const skillUrl = "https://raw.githubusercontent.com/CyrisXD/agent-notify/main/skills/agent-notify/SKILL.md";
+	const mcpJson = JSON.stringify({ mcpServers: { "agent-notify": { url: `${url}/mcp`, headers: { Authorization: `Bearer ${token}` } } } }, null, 2);
 
-<h3>Access token</h3>
-${block(token)}
+	return page(`<h1>Set up agent-notify</h1>
+<div class="warn"><b>This page is shown once.</b> If you refresh or leave, the token is gone for good. Lost it? Request a new link from <a href="/">the setup page</a>, which replaces this token.</div>
 
-<h3>Claude Code (MCP)</h3>
-${block(`claude mcp add --transport http agent-notify ${url}/mcp --header "Authorization: Bearer ${token}"`)}
+${step(1, "Save your token", `<p>Put it in your password manager now. Anyone with it can send you email.</p>
+${block(token)}`)}
 
-<h3>Cursor, Windsurf, other MCP clients (JSON config)</h3>
-${block(JSON.stringify({ mcpServers: { "agent-notify": { url: `${url}/mcp`, headers: { Authorization: `Bearer ${token}` } } } }, null, 2))}
+${step(2, "Connect your agent", `<p>Pick the tool you use. You can set up more than one.</p>
+<details name="client" open><summary>Claude Code <span>· recommended</span></summary>
+<p>Run this in your terminal. It works in every Claude Code session and folder:</p>
+${block(`claude mcp add --scope user --transport http agent-notify ${url}/mcp --header "Authorization: Bearer ${token}"`)}
+<p class="muted">Already-open sessions won't see it, so start a new one.</p></details>
+<details name="client"><summary>Cursor, Windsurf, other MCP apps</summary>
+<p>Add this to your app's MCP config: <code>~/.cursor/mcp.json</code> for Cursor, <code>~/.codeium/windsurf/mcp_config.json</code> for Windsurf. If the file already has an <code>mcpServers</code> block, add just the <code>agent-notify</code> entry.</p>
+${block(mcpJson)}</details>
+<details name="client"><summary>Scripts, CI and other agents <span>· plain HTTP</span></summary>
+<p>Save the endpoint and token in your shell profile so scripts (and the skill's fallback) can use them:</p>
+${block(`echo 'export AGENT_NOTIFY_URL=${url}' >> ~/.zshrc\necho 'export AGENT_NOTIFY_TOKEN=${token}' >> ~/.zshrc\nsource ~/.zshrc`)}
+<p>Then send with:</p>
+${block(`curl -X POST "$AGENT_NOTIFY_URL" \\\n  -H "Authorization: Bearer $AGENT_NOTIFY_TOKEN" \\\n  -H "Content-Type: application/json" \\\n  -d '{"subject":"Hello","html":"<p>It works</p>"}'`)}
+<p class="muted">On bash, use <code>~/.bashrc</code> instead of <code>~/.zshrc</code>.</p></details>`)}
 
-<h3>Claude Code skill (env vars)</h3>
-${block(`export AGENT_NOTIFY_URL=${url}\nexport AGENT_NOTIFY_TOKEN=${token}`)}
-<p class="muted">Skill: <a href="https://github.com/CyrisXD/agent-notify/tree/main/skills/agent-notify">github.com/CyrisXD/agent-notify</a></p>
+${step(3, "Install the skill <span class=\"muted\">(Claude Code)</span>", `<p>Teaches your agents <i>when</i> an email is worth sending and how to make it look good, and lets you just say "email me the results".</p>
+${block(`mkdir -p ~/.claude/skills/agent-notify && curl -fsSL ${skillUrl} -o ~/.claude/skills/agent-notify/SKILL.md`)}`)}
 
-<h3>Plain HTTP</h3>
-${block(`curl -X POST ${url} \\\n  -H "Authorization: Bearer ${token}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"subject":"Hello","text":"It works"}'`)}
+${step(4, "Send a test", `<p>Start a new Claude Code session and say:</p>
+${block("Send me a test email with agent-notify")}
+<p>It should arrive at <b>${esc(mask(env.TO_ADDRESS))}</b> within a few seconds. The token can take up to a minute to start working.</p>`)}
+
+<p class="muted">Endpoint: ${esc(url)} · <a href="https://github.com/CyrisXD/agent-notify">Docs</a></p>
 
 <script>
 for (const b of document.querySelectorAll(".copy")) b.onclick = async () => {
