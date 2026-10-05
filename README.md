@@ -19,9 +19,9 @@ Nothing to install locally. Everything runs in your browser and on Cloudflare.
 The deploy can't do these for you, because Cloudflare doesn't give deploy builds permission to change email settings. If you skip them, the deploy still succeeds but the setup email can't be sent, and the deploy log tells you what's missing.
 
 1. **Allow the domain to send:** [open Email Sending](https://dash.cloudflare.com/?to=/:account/email-service/sending), click **Onboard Domain** and pick your domain. You can also onboard a subdomain such as `notify.yourdomain.com`. Cloudflare adds the sending records itself, all under a `cf-bounce` subdomain plus DKIM.
-2. **Verify your inbox:** [open Email Routing](https://dash.cloudflare.com/?to=/:account/email-service/routing), go to **Destination addresses**, add the address where you want alerts, and click the link in the verification email Cloudflare sends.
+2. **Verify your inbox:** use the existing address where you want alerts (Gmail, Proton, work email, anything). [Open this page](https://dash.cloudflare.com/?to=/:account/email-service/routing), go to **Destination addresses**, add the address, and click the link in the verification email Cloudflare sends. This only confirms you own the address. You don't need to set up anything else on that page.
 
-> ⚠️ **Already have email on this domain (Google Workspace, Proton, Fastmail…)?** That's fine: sending works alongside it. Just **don't enable Email Routing** on the domain, because that replaces your MX records and your existing inbox stops receiving mail. If the onboarding screen offers to add a DMARC record and you already have one, keep your existing one (a domain can only have one).
+> **Already have email on this domain (Google Workspace, Proton, Fastmail…)?** That's fine. Onboarding only adds records under `cf-bounce`, so your existing inbox keeps working. It also proposes a DMARC record (`p=reject`) that replaces any existing one. That's fine if all your mail goes through a properly set up provider. If other tools send as your domain (newsletters, invoicing, Gmail "send as"), keep your existing DMARC record instead.
 
 ## Deploy
 

@@ -23,10 +23,10 @@
   "cloudflare": {
     "bindings": {
       "TO_ADDRESS": {
-        "description": "Where alerts go. Must be a **verified destination address** ([Email Routing → Destination addresses](https://dash.cloudflare.com/?to=/:account/email-service/routing))."
+        "description": "The inbox where alerts go (any provider). Verify it first: [Destination addresses](https://dash.cloudflare.com/?to=/:account/email-service/routing) → add the address → click the link Cloudflare emails you."
       },
       "FROM_ADDRESS": {
-        "description": "Sender, e.g. `alerts@yourdomain.com`. Its domain must be **onboarded for sending** ([Email Sending → Onboard Domain](https://dash.cloudflare.com/?to=/:account/email-service/sending)). Don't enable Email Routing on a domain that already receives mail."
+        "description": "Sender, e.g. `alerts@yourdomain.com`. Its domain must be **onboarded for sending** ([Email Sending → Onboard Domain](https://dash.cloudflare.com/?to=/:account/email-service/sending))."
       },
       "KV": {
         "description": "Stores your generated access token. Leave the default."
