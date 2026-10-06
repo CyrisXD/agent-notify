@@ -180,7 +180,11 @@ ${block(`claude mcp add --scope user --transport http agent-notify ${url}/mcp --
 <details name="client"><summary>Cursor, Windsurf, other MCP apps</summary>
 <p>Add this to your app's MCP config: <code>~/.cursor/mcp.json</code> for Cursor, <code>~/.codeium/windsurf/mcp_config.json</code> for Windsurf. If the file already has an <code>mcpServers</code> block, add just the <code>agent-notify</code> entry.</p>
 ${block(mcpJson)}</details>
-<details name="client"><summary>ChatGPT, Grok Bot and apps that only take a URL</summary>
+<details name="client"><summary>Grok Bot <span>· no inbox access needed</span></summary>
+<p>Go to <a href="https://grok.com/connectors">grok.com/connectors</a> → <b>New Connector</b> → <b>Custom</b>. Name it <code>agent-notify</code>, paste this URL and choose <b>no authentication</b>. The token is inside the URL, so treat it like a password.</p>
+${block(`${url}/mcp/${token}`)}
+<p>Your bots can now email you without being connected to your Gmail. For a ready-made bot, <a href="https://x.ai/bot/alHx8zJA0xXEN8FT1HDAc">add the agent-notify template</a>.</p></details>
+<details name="client"><summary>ChatGPT and apps that only take a URL</summary>
 <p>Add a custom MCP server (or connector) with this URL and choose <b>no authentication</b>. The token is inside the URL, so treat it like a password.</p>
 ${block(`${url}/mcp/${token}`)}</details>
 <details name="client"><summary>Scripts, CI and other agents <span>· plain HTTP</span></summary>

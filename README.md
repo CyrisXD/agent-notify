@@ -8,6 +8,8 @@ It's one Cloudflare Worker on your own free account, deployed in one click. **It
 
 **Works with** Claude Code, Cursor, Grok Bot, ChatGPT and OpenAI Dots (wherever custom connectors are available), and anything that can use an MCP server or send a web request.
 
+> **Using Grok Bot?** Its Gmail connector can't just send: it asks for read, modify and send access to your whole mailbox. agent-notify lets your bots email you without ever seeing your inbox. [Add the agent-notify bot →](https://x.ai/bot/alHx8zJA0xXEN8FT1HDAc) · [Grok Bot guide](grok-bot/README.md)
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/CyrisXD/agent-notify)
 
 ![How it works](docs/how-it-works.png)
@@ -46,7 +48,9 @@ just ask your agent in plain words:
 
 > Watch my inbox for new leads and email me a one-line summary of each.
 
-**ChatGPT, Grok Bot and other apps** that only accept a URL: add the secret MCP URL from your setup page as a custom connector with no authentication.
+**Grok Bot:** add the secret MCP URL from your setup page as a custom connector at [grok.com/connectors](https://grok.com/connectors) with no authentication, then [add the ready-made agent-notify bot](https://x.ai/bot/alHx8zJA0xXEN8FT1HDAc). More routines and setup in the [Grok Bot guide](grok-bot/README.md).
+
+**ChatGPT and other apps** that only accept a URL: add the secret MCP URL from your setup page as a custom connector with no authentication.
 
 Or send from any script:
 
