@@ -30,8 +30,11 @@
       "KV": {
         "description": "Stores your generated access token. Leave the default."
       },
+      "HOURLY_LIMIT": {
+        "description": "Max emails per hour (default `20`). Stops a runaway or tricked agent from flooding your inbox."
+      },
       "DAILY_LIMIT": {
-        "description": "Max emails per day. The default `100` keeps you within Cloudflare's included quota, so this can never cost money. Leave it unless you need more."
+        "description": "Max emails per day. **Keep this at `100`** to stay within Cloudflare's free email quota (about 3,000 a month, the amount included on the Workers Paid plan)."
       }
     }
   }

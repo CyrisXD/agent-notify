@@ -67,7 +67,7 @@ The connection lets your agent send email. The [agent-notify skill](skills/agent
 
 - **Knows when to email.** It always sends when you ask, and otherwise only for things you'd want to know about now: what you asked it to watch for, failures, decisions waiting on you, finished long jobs. It skips routine progress and doesn't repeat itself.
 - **Writes emails that are easy to read.** Alerts are short: a clear subject like `[FAILED] nightly backup`, what happened and what to do next. Digests you ask for (this week's free games, new leads, a report) can be as long as they need, laid out item by item with links so they're easy to skim on a phone.
-- **Stays safe.** It never puts passwords, tokens or secrets in an email, and it stops (rather than retrying) when the daily limit is reached.
+- **Stays safe.** It never puts passwords, tokens or secrets in an email, and it stops (rather than retrying) when a send limit is reached.
 
 Install it in Claude Code with one command (also shown on your setup page):
 
@@ -87,7 +87,7 @@ The skill is a plain Markdown file, so other agents that support skills or custo
 
 **Free.** On Cloudflare's free plan it can't cost anything: going over a limit just pauses sending until the next day.
 
-On the $5 Workers Paid plan, emails to your verified inbox are still free, and `DAILY_LIMIT` (default 100 a day) keeps you inside the included quota. If you're on Paid, [set a budget alert](https://developers.cloudflare.com/billing/manage/budget-alerts/) anyway.
+On the $5 Workers Paid plan, emails to your verified inbox are still free, and `DAILY_LIMIT` (default 100 a day) is set to stay within the included quota. Keep it at 100 unless you're happy to pay for extra emails. `HOURLY_LIMIT` (default 20) also stops any one agent from flooding you. If you're on Paid, [set a budget alert](https://developers.cloudflare.com/billing/manage/budget-alerts/) anyway.
 
 ## Security
 
@@ -97,7 +97,7 @@ agent-notify is secure by design: it can only ever email you. Nothing a caller s
 - Your token is shown once and never emailed. Only its hash is stored.
 - Your Worker's URL is hard to guess. Every request counts toward your Cloudflare usage, even rejected ones, and the default name `agent-notify` is the same for everyone, so a random name keeps junk traffic away. `npm run deploy` picks one for you on the first deploy (`agent-notify-` plus 24 random characters). ***With the Deploy button, type a suffix into the Worker name field yourself.*** This is only an extra layer: nothing works without your token, whatever the URL.
 - Setup happens once. Links only go to your inbox, expire in an hour, and stop working the moment your token is revealed. You also get an email when that happens, so you'd know if anyone else got there first. Only someone with access to your Cloudflare account can reset it (see below).
-- A leaked token can only email *you*, up to `DAILY_LIMIT` a day. But those emails come from your own domain, so treat an unexpected agent-notify email asking you to log in, pay or run something as phishing.
+- A leaked token can only email *you*, up to `HOURLY_LIMIT` an hour and `DAILY_LIMIT` a day. But those emails come from your own domain, so treat an unexpected agent-notify email asking you to log in, pay or run something as phishing.
 - Lost or leaked token? In Cloudflare go to **Storage & Databases → KV**, open this Worker's namespace and delete the `token_sha256` key. The old token stops working within about a minute and setup reopens: open your Worker's URL and request a new link.
 
 ### Prompt injection
@@ -114,11 +114,11 @@ What agent-notify does is limit the damage. A tricked agent can't email your fil
 <summary><b>Troubleshooting</b></summary>
 
 - **"email sending not authorized":** your `FROM_ADDRESS` domain isn't onboarded (step 1). Fix it, wait a few minutes, then open your Worker's URL and click **Email me a setup link**. No redeploy needed.
-- **Need to change `TO_ADDRESS`, `FROM_ADDRESS` or `DAILY_LIMIT`?** Edit `wrangler.jsonc` in the copy of this repo that Cloudflare created on your GitHub. Committing redeploys it. Don't change them in the Cloudflare dashboard: the next deploy resets them.
+- **Need to change `TO_ADDRESS`, `FROM_ADDRESS`, `HOURLY_LIMIT` or `DAILY_LIMIT`?** Edit `wrangler.jsonc` in the copy of this repo that Cloudflare created on your GitHub. Committing redeploys it. Don't change them in the Cloudflare dashboard: the next deploy resets them.
 - **No setup email:** check spam, then request one from your Worker's URL.
 - **Claude Code says the tool isn't available:** run `claude mcp list`. If `agent-notify` is missing, re-run the command from your setup page (it uses `--scope user`, so it works in every folder).
 - **Build fails with "build token … deleted or rolled":** Worker → **Settings → Builds → API token → Create new token**, then **Retry build**.
-- **429 "Daily email limit reached":** resets at 00:00 UTC. To raise it, change `DAILY_LIMIT` (see above).
+- **429 "Hourly/Daily email limit reached":** the hourly limit resets at the top of the hour, the daily one at 00:00 UTC. To raise them, change `HOURLY_LIMIT` or `DAILY_LIMIT` (see above).
 
 </details>
 

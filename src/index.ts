@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
-import { authorized, confirmPage, DailyLimitError, reveal, sendEmail, sendLink, startPage } from "./setup";
+import { authorized, confirmPage, LimitError, reveal, sendEmail, sendLink, startPage } from "./setup";
 
 const Notification = z.object({
 	subject: z.string().min(1).max(200).regex(/^[^\r\n]+$/, "Subject must be one line").describe("Short, specific subject line"),
@@ -61,7 +61,7 @@ export default {
 			await sendEmail(env, parsed.data);
 			return Response.json({ ok: true });
 		} catch (e) {
-			const limited = e instanceof DailyLimitError;
+			const limited = e instanceof LimitError;
 			return Response.json({ ok: false, error: limited ? e.message : String(e) }, { status: limited ? 429 : 502 });
 		}
 	},

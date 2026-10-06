@@ -25,7 +25,7 @@ When unsure, don't send. Batch related findings into one email.
 Call `send_email_notification` with `subject` and `html` (`text` is optional). The recipient is fixed, so there's no address to fill in.
 
 - "Sent": done.
-- "Daily email limit reached": don't retry. Tell the user in chat.
+- "Hourly email limit reached" or "Daily email limit reached": don't retry. Tell the user in chat.
 - The tool isn't available: tell the user to set up agent-notify (https://github.com/CyrisXD/agent-notify) and add it as a custom connector at grok.com/connectors, using the full secret MCP URL from their setup page.
 
 ## Writing it

@@ -34,7 +34,7 @@ jq -n --arg s "$SUBJECT" --arg h "$HTML" '{subject:$s, html:$h}' |
 
 Use `jq` (or Python `json.dumps`) to build the JSON. Never hand-escape HTML into a JSON string. If neither the tool nor the env vars exist, tell the user to set it up (https://github.com/CyrisXD/agent-notify) instead of failing silently. If they have deployed but have no token, they open their Worker URL in a browser and click "Email me a setup link", then open the one-time link from their inbox. If they say they already added the MCP server but the tool isn't here, it was probably added without `--scope user`, so it only works in the folder where they ran the command. They can check with `claude mcp list` and re-add it with `--scope user`.
 
-`{"ok":true}` means sent. A 401 means the token is wrong; 400 means `subject` is missing or both bodies are empty; 429 means the daily email limit is reached, so don't retry: tell the user in chat instead.
+`{"ok":true}` means sent. A 401 means the token is wrong; 400 means `subject` is missing or both bodies are empty; 429 means an hourly or daily send limit is reached, so don't retry: tell the user in chat instead.
 
 ## Writing it
 

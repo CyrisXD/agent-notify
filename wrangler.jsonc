@@ -15,7 +15,10 @@
   "vars": {
     "TO_ADDRESS": "you@example.com",
     "FROM_ADDRESS": "alerts@yourdomain.com",
-    // Max emails per day (UTC). 100/day stays under the 3,000/month included on the Workers Paid plan.
+    // Max emails per hour. Stops a runaway or tricked agent from flooding your inbox.
+    "HOURLY_LIMIT": "20",
+    // Max emails per day (UTC). Keep this at 100 to stay within Cloudflare's free email quota:
+    // 100/day is about 3,000/month, the amount included on the Workers Paid plan.
     "DAILY_LIMIT": "100"
   }
 }

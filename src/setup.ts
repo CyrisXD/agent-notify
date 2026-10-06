@@ -15,17 +15,29 @@ const sha256 = async (s: string) => new Uint8Array(await crypto.subtle.digest("S
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const mask = (email: string) => email.replace(/^(.).*(@.*)$/, "$1•••$2");
 
-export class DailyLimitError extends Error {}
+export class LimitError extends Error {}
 
-/** Every email goes through here: fixed recipient, and a daily cap so usage can never become a bill. */
+/**
+ * Every email goes through here: fixed recipient, plus caps. Alerts have an hourly cap (stops a runaway agent)
+ * and a daily cap (keeps usage within Cloudflare's included quota). Setup links have their own daily cap.
+ */
 export async function sendEmail(env: Env, msg: { subject: string; html?: string; text?: string }, kind: "alert" | "link" = "alert") {
-	const key = `${kind === "alert" ? "sent" : "links"}:${new Date().toISOString().slice(0, 10)}`;
-	const limit = kind === "alert" ? Number(env.DAILY_LIMIT) || 100 : LINKS_PER_DAY;
-	const sent = Number(await env.KV.get(key));
-	// ponytail: KV counters are eventually consistent, so parallel bursts can overshoot the cap slightly. Durable Object if exactness matters.
-	if (sent >= limit) throw new DailyLimitError(`Daily ${kind === "alert" ? "email" : "setup link"} limit (${limit}) reached. Resets at 00:00 UTC.`);
-	await env.EMAIL.send({ to: env.TO_ADDRESS, from: env.FROM_ADDRESS, ...msg });
-	await env.KV.put(key, String(sent + 1), { expirationTtl: 2 * 86400 });
+	const now = new Date().toISOString(); // e.g. 2026-10-06T02:22:52Z → day "2026-10-06", hour "2026-10-06T02"
+	const caps =
+		kind === "alert"
+			? [
+					{ key: `hour:${now.slice(0, 13)}`, limit: Number(env.HOURLY_LIMIT) || 20, ttl: 2 * 3600, name: "Hourly email", resets: "at the top of the hour" },
+					{ key: `sent:${now.slice(0, 10)}`, limit: Number(env.DAILY_LIMIT) || 100, ttl: 2 * 86400, name: "Daily email", resets: "at 00:00 UTC" },
+				]
+			: [{ key: `links:${now.slice(0, 10)}`, limit: LINKS_PER_DAY, ttl: 2 * 86400, name: "Daily setup link", resets: "at 00:00 UTC" }];
+	const counts = await Promise.all(caps.map((c) => env.KV.get(c.key).then(Number)));
+	// ponytail: KV counters are eventually consistent, so parallel bursts can overshoot a cap slightly. Durable Object if exactness matters.
+	caps.forEach((c, i) => {
+		if (counts[i] >= c.limit) throw new LimitError(`${c.name} limit (${c.limit}) reached. Resets ${c.resets}.`);
+	});
+	// Recipient and sender go last, so nothing a caller sends can override them.
+	await env.EMAIL.send({ ...msg, to: env.TO_ADDRESS, from: env.FROM_ADDRESS });
+	await Promise.all(caps.map((c, i) => env.KV.put(c.key, String(counts[i] + 1), { expirationTtl: c.ttl })));
 }
 
 /** True if the request carries the current token (in the Authorization header, or in a secret MCP URL). */
@@ -71,6 +83,8 @@ ${body}`,
 				"Cache-Control": "no-store",
 				"Referrer-Policy": "no-referrer",
 				"X-Frame-Options": "DENY",
+				// Only our own inline styles and copy-button script; no outside resources, forms only post back here.
+				"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
 			},
 		},
 	);
@@ -123,7 +137,7 @@ export async function sendLink(req: Request, env: Env) {
 		}, "link");
 	} catch (e) {
 		await env.KV.delete("link_sent_at");
-		if (e instanceof DailyLimitError)
+		if (e instanceof LimitError)
 			return reply("limit", `<h1>Too many setup links today</h1><p>For safety, only ${LINKS_PER_DAY} setup links can be sent per day. Try again tomorrow (00:00 UTC).</p>`, e.message);
 		return reply("error", `<h1>Couldn't send the email</h1><p>${esc(String(e))}</p>
 <p>Usually the domain of ${esc(env.FROM_ADDRESS)} isn't <a href="https://dash.cloudflare.com/?to=/:account/email-service/sending">onboarded for sending</a> yet. Also check ${esc(to)} is a <a href="https://dash.cloudflare.com/?to=/:account/email-service/routing">verified destination address</a>.</p>
